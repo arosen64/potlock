@@ -18,6 +18,7 @@ The group treasury app requires a trustless on-chain foundation: funds must only
 ## Capabilities
 
 ### New Capabilities
+
 - `treasury-init`: Initialize a treasury PDA with members, approval threshold, and pool ID
 - `treasury-deposit`: Members deposit SOL into the treasury PDA
 - `contract-versioning`: Store contract version hashes on-chain in a doubly linked list; gate proposals behind an active contract
@@ -25,6 +26,7 @@ The group treasury app requires a trustless on-chain foundation: funds must only
 - `wallet-integration`: In-browser demo wallet — deterministic keypair from username, auto-airdrop, localStorage persistence, unified signer interface alongside Phantom
 
 ### Modified Capabilities
+
 <!-- None — this is a net-new on-chain layer; no existing specs are affected -->
 
 ## Impact

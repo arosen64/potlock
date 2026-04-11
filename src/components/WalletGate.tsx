@@ -34,9 +34,7 @@ export function WalletGate({ children }: Props) {
             Log Out
           </button>
         </div>
-        {airdropWarning && (
-          <div style={styles.warning}>{airdropWarning}</div>
-        )}
+        {airdropWarning && <div style={styles.warning}>{airdropWarning}</div>}
         {children}
       </div>
     );

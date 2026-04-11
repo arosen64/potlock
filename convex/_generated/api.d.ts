@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as contractPdf from "../contractPdf.js";
+import type * as contractVersions from "../contractVersions.js";
 import type * as contracts from "../contracts.js";
 import type * as members from "../members.js";
 import type * as pools from "../pools.js";
@@ -19,6 +21,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  contractPdf: typeof contractPdf;
+  contractVersions: typeof contractVersions;
   contracts: typeof contracts;
   members: typeof members;
   pools: typeof pools;
