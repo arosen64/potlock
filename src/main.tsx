@@ -13,7 +13,7 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string)
 const endpoint = clusterApiUrl('devnet')
 const wallets = [new PhantomWalletAdapter()]
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
@@ -25,4 +25,4 @@ createRoot(document.getElementById('root')!).render(
       </WalletProvider>
     </ConnectionProvider>
   </StrictMode>,
-)
+);
