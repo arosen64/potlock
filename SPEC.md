@@ -68,7 +68,7 @@ Members join a pool by providing their **name and wallet address**. The name →
 {
   "members": [
     { "name": "Alice", "wallet": "...", "role": "manager" },
-    { "name": "Bob",   "wallet": "...", "role": "member" },
+    { "name": "Bob", "wallet": "...", "role": "member" },
     { "name": "Carol", "wallet": "...", "role": "member" }
   ]
 }
@@ -175,12 +175,14 @@ PROPOSED
 ## AI Integration
 
 ### Gemini API
+
 - **PDF extraction**: reads an uploaded PDF and extracts contract content into the Tiptap editor when no contract exists yet
 - Formalizes plain-language group rules → structured contract content
 - Assists contract amendments: current contract + natural language change → new contract version
 - Validates a proposed transaction against contract terms (type allowed, budget in range, description coherent)
 
 ### Mastra Agents (Optional per Transaction — First Line of Defense)
+
 - Triggered when a proposer attaches a URL to a transaction
 - **Non-blocking**: transaction flow continues regardless of agent findings
 - **Fetch Agent**: retrieves and parses the linked page
@@ -224,15 +226,15 @@ Contract Amendment
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Blockchain | Solana (Anchor framework) |
-| AI Formalization | Google Gemini API |
-| Multi-Agent (optional) | Mastra |
-| Frontend | Next.js + Tailwind |
-| Rich Text Editor | Tiptap |
-| Wallet | Phantom / Solana wallet adapter |
-| Off-chain Storage | Convex DB (contract content, transaction metadata, member identity) |
+| Layer                  | Technology                                                          |
+| ---------------------- | ------------------------------------------------------------------- |
+| Blockchain             | Solana (Anchor framework)                                           |
+| AI Formalization       | Google Gemini API                                                   |
+| Multi-Agent (optional) | Mastra                                                              |
+| Frontend               | Next.js + Tailwind                                                  |
+| Rich Text Editor       | Tiptap                                                              |
+| Wallet                 | Phantom / Solana wallet adapter                                     |
+| Off-chain Storage      | Convex DB (contract content, transaction metadata, member identity) |
 
 ---
 

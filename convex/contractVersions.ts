@@ -23,7 +23,7 @@ export const storeContractVersion = mutation({
       const prev = await ctx.db
         .query("contractVersions")
         .withIndex("by_versionHash", (q) =>
-          q.eq("versionHash", args.prevVersionHash as string)
+          q.eq("versionHash", args.prevVersionHash as string),
         )
         .unique();
       if (prev) {
@@ -61,9 +61,7 @@ export const getContractVersionByHash = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("contractVersions")
-      .withIndex("by_versionHash", (q) =>
-        q.eq("versionHash", args.versionHash)
-      )
+      .withIndex("by_versionHash", (q) => q.eq("versionHash", args.versionHash))
       .unique();
   },
 });
@@ -78,4 +76,3 @@ export const listContractVersions = query({
       .collect();
   },
 });
-

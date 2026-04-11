@@ -15,11 +15,13 @@ The group treasury app requires that every contract version's full content be ac
 ## Capabilities
 
 ### New Capabilities
+
 - `contract-storage`: Persist full contract content per version in Convex as Tiptap JSON, with mocked version hash and doubly linked list pointers (`prevVersionHash`, `nextVersionHash`)
 - `contract-editor-ui`: Rich text editor (Tiptap) for creating or amending a contract; PDF upload → Gemini extraction → pre-populated editor when no contract exists
 - `contract-version-history-ui`: Read-only rendered view of the active contract with prev/next version navigation
 
 ### Modified Capabilities
+
 <!-- None - this is a net-new feature with no existing specs to modify -->
 
 ## Impact

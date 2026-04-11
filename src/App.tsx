@@ -6,7 +6,10 @@ import { ContractEditor } from "./components/ContractEditor";
 import { ContractViewer } from "./components/ContractViewer";
 
 function ContractPage({ poolId }: { poolId: string }) {
-  const activeVersion = useQuery(api.contractVersions.getActiveContractVersion, { poolId });
+  const activeVersion = useQuery(
+    api.contractVersions.getActiveContractVersion,
+    { poolId },
+  );
 
   if (activeVersion === undefined) return <p>Loading...</p>;
 
@@ -28,7 +31,10 @@ function App() {
           {(params) => <ContractPage poolId={params.poolId} />}
         </Route>
         <Route>
-          <p>Navigate to <code>/pool/&lt;poolId&gt;/contract</code> to get started.</p>
+          <p>
+            Navigate to <code>/pool/&lt;poolId&gt;/contract</code> to get
+            started.
+          </p>
         </Route>
       </Switch>
     </Router>

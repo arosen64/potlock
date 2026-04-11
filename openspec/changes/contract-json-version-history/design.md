@@ -7,6 +7,7 @@ The contract content is rich text authored by pool members. It must be editable 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Convex `contractVersions` table with Tiptap JSON content and linked-list hash pointers
 - Rich text editor (Tiptap) for creating and amending contracts
 - PDF upload → Gemini extraction → editor pre-population (first-time creation only)
@@ -14,6 +15,7 @@ The contract content is rich text authored by pool members. It must be editable 
 - Mocked version hash (`crypto.randomUUID()`) so the full feature works before Solana is ready
 
 **Non-Goals:**
+
 - Real on-chain hash integration (deferred to issue #3)
 - Approval/voting flow for amendments (deferred to issue #7)
 - Gemini natural-language-to-structure formalization (deferred to issue #6)
