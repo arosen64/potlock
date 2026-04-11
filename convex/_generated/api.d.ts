@@ -8,13 +8,19 @@
  * @module
  */
 
+import type * as contractPdf from "../contractPdf.js";
+import type * as contractVersions from "../contractVersions.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  contractPdf: typeof contractPdf;
+  contractVersions: typeof contractVersions;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
