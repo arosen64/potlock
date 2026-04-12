@@ -18,7 +18,11 @@ type Props = {
   onBack: () => void;
 };
 
-export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) {
+export function AllTransactionsPage({
+  poolId,
+  currentMemberId,
+  onBack,
+}: Props) {
   const proposals = useQuery(api.approvals.getProposalsWithDetails, {
     poolId,
     currentMemberId: currentMemberId ?? undefined,
@@ -39,7 +43,10 @@ export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) 
   const pending = proposals.filter((p) => p.status === "pending");
   const past = proposals.filter((p) => p.status !== "pending");
 
-  async function handleVote(proposalId: Id<"proposals">, vote: "approve" | "reject") {
+  async function handleVote(
+    proposalId: Id<"proposals">,
+    vote: "approve" | "reject",
+  ) {
     if (!currentMemberId) return;
     await castVote({ proposalId, memberId: currentMemberId, vote });
   }
@@ -59,13 +66,17 @@ export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) 
           <h2 className="text-lg font-semibold">Pending Proposals</h2>
           <Separator />
           {pending.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No pending proposals.</p>
+            <p className="text-sm text-muted-foreground">
+              No pending proposals.
+            </p>
           ) : (
             pending.map((proposal) => (
               <Card key={proposal._id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="leading-snug">{proposal.description}</CardTitle>
+                    <CardTitle className="leading-snug">
+                      {proposal.description}
+                    </CardTitle>
                     <Badge variant="outline">Pending</Badge>
                   </div>
                   <CardDescription>
@@ -87,7 +98,9 @@ export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) 
                       ⏳ {proposal.tally.pending} pending
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{proposal.quorumDescription}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {proposal.quorumDescription}
+                  </p>
 
                   {currentMemberId && (
                     <div className="flex flex-wrap gap-2">
@@ -110,9 +123,14 @@ export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) 
                         </>
                       ) : (
                         <Badge
-                          variant={proposal.myVote === "approve" ? "default" : "destructive"}
+                          variant={
+                            proposal.myVote === "approve"
+                              ? "default"
+                              : "destructive"
+                          }
                         >
-                          You voted {proposal.myVote === "approve" ? "Yes" : "No"}
+                          You voted{" "}
+                          {proposal.myVote === "approve" ? "Yes" : "No"}
                         </Badge>
                       )}
 
@@ -138,14 +156,24 @@ export function AllTransactionsPage({ poolId, currentMemberId, onBack }: Props) 
           <h2 className="text-lg font-semibold">Past Transactions</h2>
           <Separator />
           {past.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No past transactions yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No past transactions yet.
+            </p>
           ) : (
             past.map((proposal) => (
               <Card key={proposal._id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="leading-snug">{proposal.description}</CardTitle>
-                    <Badge variant={proposal.status === "approved" ? "default" : "destructive"}>
+                    <CardTitle className="leading-snug">
+                      {proposal.description}
+                    </CardTitle>
+                    <Badge
+                      variant={
+                        proposal.status === "approved"
+                          ? "default"
+                          : "destructive"
+                      }
+                    >
                       {proposal.status === "approved" ? "Approved" : "Rejected"}
                     </Badge>
                   </div>
