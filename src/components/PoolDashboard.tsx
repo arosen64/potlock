@@ -108,7 +108,11 @@ export function PoolDashboard({
       <AllTransactionsPage
         poolId={poolId}
         currentMemberId={currentMember?._id ?? null}
-        onBack={() => setView("dashboard")}
+        onBack={() => {
+          setView("dashboard");
+          refreshTreasuryBalance();
+        }}
+        onBalanceChanged={refreshTreasuryBalance}
       />
     );
   }
