@@ -15,7 +15,7 @@ import App from "./App.tsx";
 import { useWalletAuth } from "./hooks/useWalletAuth.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
-const endpoint = clusterApiUrl("devnet");
+const endpoint = import.meta.env.VITE_RPC_URL ?? clusterApiUrl("devnet");
 const wallets = [new PhantomWalletAdapter()];
 
 createRoot(document.getElementById("root")!).render(
