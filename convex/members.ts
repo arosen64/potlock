@@ -1,21 +1,17 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ConvexError } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 
 // 2.1 — Add a member to a pool, enforcing uniqueness of name and wallet within the pool.
-// The caller's wallet address is derived from their auth token — no wallet arg accepted.
 export const addMember = mutation({
   args: {
     poolId: v.id("pools"),
     name: v.string(),
     role: v.union(v.literal("manager"), v.literal("member")),
+    wallet: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
-
-    const wallet = identity.tokenIdentifier;
+    const wallet = args.wallet;
 
     const existing = await ctx.db
       .query("members")
@@ -55,14 +51,11 @@ export const getMembers = query({
   },
 });
 
-// Returns all pools the authenticated caller belongs to, with their role in each
+// Returns all pools a wallet address belongs to, with their role in each
 export const getPoolsByWallet = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const wallet = identity.tokenIdentifier;
+  args: { wallet: v.string() },
+  handler: async (ctx, args) => {
+    const wallet = args.wallet;
     const memberships = await ctx.db
       .query("members")
       .withIndex("by_wallet", (q) => q.eq("wallet", wallet))
@@ -76,6 +69,30 @@ export const getPoolsByWallet = query({
       }
     }
     return result;
+  },
+});
+
+// Record a confirmed on-chain deposit — increments contributedLamports for the depositing member
+export const recordDeposit = mutation({
+  args: {
+    poolId: v.id("pools"),
+    wallet: v.string(),
+    lamports: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const member = await ctx.db
+      .query("members")
+      .withIndex("by_poolId_and_wallet", (q) =>
+        q.eq("poolId", args.poolId).eq("wallet", args.wallet),
+      )
+      .first();
+
+    if (!member) throw new Error("Member not found in this pool.");
+
+    const current = member.contributedLamports ?? 0;
+    await ctx.db.patch(member._id, {
+      contributedLamports: current + args.lamports,
+    });
   },
 });
 

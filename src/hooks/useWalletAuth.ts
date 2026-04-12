@@ -97,11 +97,30 @@ export function useWalletAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, publicKey]);
 
-  // Expose shape expected by ConvexProviderWithAuth
-  const fetchAccessToken = useCallback(async (): Promise<string | null> => {
-    if (authState.status === "authenticated") return authState.token;
-    return null;
-  }, [authState]);
+  // Expose shape expected by ConvexProviderWithAuth.
+  // When Convex calls with forceRefreshToken: true it means the current token
+  // was rejected (expired). We can't silently refresh (requires Phantom),
+  // so we clear auth state — the UI gate in App.tsx will show SignInScreen
+  // and the useEffect below will re-trigger doSignIn cleanly.
+  const fetchAccessToken = useCallback(
+    async ({
+      forceRefreshToken,
+    }: {
+      forceRefreshToken: boolean;
+    }): Promise<string | null> => {
+      if (authState.status !== "authenticated") return null;
+      if (forceRefreshToken) {
+        // Token expired. If a Phantom signing is already in progress (e.g. a Solana
+        // transaction), don't interrupt it — just return null and let Convex retry later.
+        if (signingRef.current) return null;
+        // Otherwise drop to unauthenticated so the app shows SignInScreen.
+        setAuthState({ status: "unauthenticated" });
+        return null;
+      }
+      return authState.token;
+    },
+    [authState],
+  );
 
   return {
     isLoading: authState.status === "loading" || authState.status === "signing",
