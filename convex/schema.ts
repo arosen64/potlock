@@ -56,6 +56,7 @@ export default defineSchema({
       v.literal("approved"),
       v.literal("rejected"),
     ),
+    resolvedAt: v.optional(v.number()), // ms timestamp when approved/rejected
   })
     .index("by_poolId", ["poolId"])
     .index("by_poolId_and_status", ["poolId", "status"]),
