@@ -1,9 +1,4 @@
-// Anchor (and other Solana libs) rely on Node's Buffer global — polyfill for Vite browser builds.
-import { Buffer } from "buffer";
-if (typeof window !== "undefined") {
-  (window as unknown as Record<string, unknown>).Buffer = Buffer;
-}
-
+import "./polyfills";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
