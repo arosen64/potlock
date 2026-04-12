@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -8,6 +8,7 @@ import { ContractHistoryPage } from "./ContractHistoryPage";
 import { AllTransactionsPage } from "./AllTransactionsPage";
 import { AmendContractPage } from "./AmendContractPage";
 import { CreateProposalPage } from "./CreateProposalPage";
+import { InviteMembersModal } from "./InviteMembersModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,12 +35,21 @@ export function PoolDashboard({
 }: PoolDashboardProps) {
   const { disconnect } = useWallet();
   const [view, setView] = useState<View>("dashboard");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const pool = useQuery(api.pools.getPool, { poolId });
   const members = useQuery(api.members.getMembers, { poolId });
 
   const currentMember = members?.find((m) => m.wallet === walletAddress);
   const role = currentMember?.role ?? "member";
+
+  // Only managers fetch pending requests
+  const pendingMembers = useQuery(
+    api.members.getPendingMembers,
+    role === "manager" ? { poolId } : "skip",
+  );
+
+  const resolveJoinRequest = useMutation(api.members.resolveJoinRequest);
 
   // ── Sub-pages ──────────────────────────────────────────────────────────────
 
@@ -83,6 +93,31 @@ export function PoolDashboard({
     );
   }
 
+  // Pending user guard — show waiting screen instead of dashboard
+  if (members !== undefined && currentMember?.status === "pending") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-8">
+        <Card className="w-full max-w-sm text-center">
+          <CardHeader>
+            <CardTitle className="text-lg">Request Pending</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Your request to join <strong>{pool?.name ?? "this pool"}</strong>{" "}
+              is awaiting manager approval.
+            </p>
+            <button
+              onClick={onBack}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to pools
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (view === "create-proposal" && currentMember) {
     return (
       <CreateProposalPage
@@ -122,7 +157,7 @@ export function PoolDashboard({
     },
     {
       label: "Invite Members",
-      onClick: () => {}, // issue #29
+      onClick: () => setInviteOpen(true),
     },
   ];
 
@@ -169,6 +204,62 @@ export function PoolDashboard({
           </div>
         </div>
 
+        {/* Pending Requests — manager only, hidden when empty */}
+        {role === "manager" && pendingMembers && pendingMembers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Pending Requests
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1">
+              {pendingMembers.map((member) => (
+                <div
+                  key={member._id}
+                  className="flex items-center justify-between py-2.5 border-b border-border last:border-0"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">{member.name}</span>
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {member.wallet.slice(0, 4)}…{member.wallet.slice(-4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 border-green-600 text-green-600 hover:bg-green-50 hover:text-green-700"
+                      onClick={() =>
+                        resolveJoinRequest({
+                          poolId,
+                          memberId: member._id,
+                          action: "accept",
+                        })
+                      }
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() =>
+                        resolveJoinRequest({
+                          poolId,
+                          memberId: member._id,
+                          action: "reject",
+                        })
+                      }
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Treasury Balance */}
         <Card>
           <CardHeader>
@@ -197,49 +288,53 @@ export function PoolDashboard({
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </>
-            ) : members.length === 0 ? (
+            ) : members.filter((m) => m.status !== "pending").length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
                 No members yet.
               </p>
             ) : (
-              members.map((member) => {
-                // contributedLamports is in the schema but Convex types regenerate on next `convex dev`
-                const contributed = (
-                  member as typeof member & { contributedLamports?: number }
-                ).contributedLamports;
-                return (
-                  <div
-                    key={member._id}
-                    className="flex items-center justify-between py-2.5 border-b border-border last:border-0"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">{member.name}</span>
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {member.wallet.slice(0, 4)}…{member.wallet.slice(-4)}
-                      </span>
+              members
+                .filter((m) => m.status !== "pending")
+                .map((member) => {
+                  // contributedLamports is in the schema but Convex types regenerate on next `convex dev`
+                  const contributed = (
+                    member as typeof member & { contributedLamports?: number }
+                  ).contributedLamports;
+                  return (
+                    <div
+                      key={member._id}
+                      className="flex items-center justify-between py-2.5 border-b border-border last:border-0"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium">
+                          {member.name}
+                        </span>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {member.wallet.slice(0, 4)}…{member.wallet.slice(-4)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">
+                          {contributed
+                            ? `${(contributed / 1e9).toFixed(4)} SOL`
+                            : "0 SOL"}
+                        </span>
+                        <Badge
+                          variant={
+                            member.role === "manager" ? "default" : "secondary"
+                          }
+                          className={
+                            member.role === "manager"
+                              ? "bg-violet-600 hover:bg-violet-600 text-xs"
+                              : "text-xs"
+                          }
+                        >
+                          {member.role}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {contributed
-                          ? `${(contributed / 1e9).toFixed(4)} SOL`
-                          : "0 SOL"}
-                      </span>
-                      <Badge
-                        variant={
-                          member.role === "manager" ? "default" : "secondary"
-                        }
-                        className={
-                          member.role === "manager"
-                            ? "bg-violet-600 hover:bg-violet-600 text-xs"
-                            : "text-xs"
-                        }
-                      >
-                        {member.role}
-                      </Badge>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </CardContent>
         </Card>
@@ -267,6 +362,12 @@ export function PoolDashboard({
           </CardContent>
         </Card>
       </div>
+
+      <InviteMembersModal
+        poolId={poolId}
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+      />
     </div>
   );
 }
