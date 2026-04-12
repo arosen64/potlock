@@ -99,7 +99,7 @@ export const resolveJoinRequest = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new ConvexError("Unauthenticated");
 
-    const callerWallet = identity.tokenIdentifier;
+    const callerWallet = identity.subject;
 
     // Verify caller is a manager in this pool
     const allMembers = await ctx.db
