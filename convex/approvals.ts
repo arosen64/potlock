@@ -109,11 +109,17 @@ export const castVote = mutation({
     if (
       evaluateApprovalRule(rule, votes, members, proposal.amount ?? undefined)
     ) {
-      await ctx.db.patch(args.proposalId, { status: "approved", resolvedAt: Date.now() });
+      await ctx.db.patch(args.proposalId, {
+        status: "approved",
+        resolvedAt: Date.now(),
+      });
     } else if (
       !canStillReachQuorum(rule, votes, members, proposal.amount ?? undefined)
     ) {
-      await ctx.db.patch(args.proposalId, { status: "rejected", resolvedAt: Date.now() });
+      await ctx.db.patch(args.proposalId, {
+        status: "rejected",
+        resolvedAt: Date.now(),
+      });
     }
   },
 });
@@ -297,7 +303,10 @@ export const cancelProposal = mutation({
     if (proposal.proposerId !== args.memberId) {
       throw new Error("Only the proposer can cancel this proposal");
     }
-    await ctx.db.patch(args.proposalId, { status: "rejected", resolvedAt: Date.now() });
+    await ctx.db.patch(args.proposalId, {
+      status: "rejected",
+      resolvedAt: Date.now(),
+    });
   },
 });
 
@@ -368,7 +377,8 @@ export const getProposalsWithDetails = query({
         }
 
         const voterDetails = voteRows.map((v) => ({
-          memberName: memberRows.find((m) => m._id === v.memberId)?.name ?? "Unknown",
+          memberName:
+            memberRows.find((m) => m._id === v.memberId)?.name ?? "Unknown",
           vote: v.vote,
         }));
 

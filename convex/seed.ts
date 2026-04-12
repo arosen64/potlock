@@ -14,7 +14,8 @@ export const seedTestProposals = mutation({
       .query("proposals")
       .withIndex("by_poolId", (q) => q.eq("poolId", args.poolId))
       .take(1);
-    if (existing.length > 0) return { seeded: false, reason: "proposals already exist" };
+    if (existing.length > 0)
+      return { seeded: false, reason: "proposals already exist" };
 
     const members = await ctx.db
       .query("members")
@@ -22,7 +23,8 @@ export const seedTestProposals = mutation({
       .take(50);
 
     const active = members.filter((m) => m.isActive !== false);
-    if (active.length === 0) return { seeded: false, reason: "no members in pool" };
+    if (active.length === 0)
+      return { seeded: false, reason: "no members in pool" };
 
     const manager = active.find((m) => m.role === "manager") ?? active[0];
     const others = active.filter((m) => m._id !== manager._id);
@@ -40,7 +42,11 @@ export const seedTestProposals = mutation({
       resolvedAt: now - 5 * DAY,
     });
     for (const m of active) {
-      await ctx.db.insert("votes", { proposalId: p1, memberId: m._id, vote: "approve" });
+      await ctx.db.insert("votes", {
+        proposalId: p1,
+        memberId: m._id,
+        vote: "approve",
+      });
     }
 
     const p2 = await ctx.db.insert("proposals", {
@@ -53,7 +59,11 @@ export const seedTestProposals = mutation({
       resolvedAt: now - 2 * DAY,
     });
     for (const m of active) {
-      await ctx.db.insert("votes", { proposalId: p2, memberId: m._id, vote: "approve" });
+      await ctx.db.insert("votes", {
+        proposalId: p2,
+        memberId: m._id,
+        vote: "approve",
+      });
     }
 
     // ── Past: Rejected ───────────────────────────────────────────────────────
@@ -84,7 +94,11 @@ export const seedTestProposals = mutation({
       status: "pending",
     });
     if (others[0]) {
-      await ctx.db.insert("votes", { proposalId: p4, memberId: others[0]._id, vote: "approve" });
+      await ctx.db.insert("votes", {
+        proposalId: p4,
+        memberId: others[0]._id,
+        vote: "approve",
+      });
     }
 
     await ctx.db.insert("proposals", {
