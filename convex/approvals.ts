@@ -109,11 +109,11 @@ export const castVote = mutation({
     if (
       evaluateApprovalRule(rule, votes, members, proposal.amount ?? undefined)
     ) {
-      await ctx.db.patch(args.proposalId, { status: "approved" });
+      await ctx.db.patch(args.proposalId, { status: "approved", resolvedAt: Date.now() });
     } else if (
       !canStillReachQuorum(rule, votes, members, proposal.amount ?? undefined)
     ) {
-      await ctx.db.patch(args.proposalId, { status: "rejected" });
+      await ctx.db.patch(args.proposalId, { status: "rejected", resolvedAt: Date.now() });
     }
   },
 });
@@ -297,7 +297,7 @@ export const cancelProposal = mutation({
     if (proposal.proposerId !== args.memberId) {
       throw new Error("Only the proposer can cancel this proposal");
     }
-    await ctx.db.patch(args.proposalId, { status: "rejected" });
+    await ctx.db.patch(args.proposalId, { status: "rejected", resolvedAt: Date.now() });
   },
 });
 
@@ -367,6 +367,30 @@ export const getProposalsWithDetails = query({
             break;
         }
 
+        const voterDetails = voteRows.map((v) => ({
+          memberName: memberRows.find((m) => m._id === v.memberId)?.name ?? "Unknown",
+          vote: v.vote,
+        }));
+
+        let ruleLabel = "";
+        switch (rule.type) {
+          case "unanimous":
+            ruleLabel = "Unanimous approval required";
+            break;
+          case "k-of-n":
+            ruleLabel = `${rule.k}-of-${activeMembers.length} approval required`;
+            break;
+          case "named-set":
+            ruleLabel = `Approval from ${rule.memberIds.length} designated members required`;
+            break;
+          case "role-based":
+            ruleLabel = `All "${rule.role}" members must approve`;
+            break;
+          case "tiered":
+            ruleLabel = "Tiered approval required";
+            break;
+        }
+
         return {
           ...proposal,
           proposerName: proposer?.name ?? "Unknown",
@@ -378,6 +402,10 @@ export const getProposalsWithDetails = query({
           },
           myVote,
           quorumDescription,
+          voterDetails,
+          ruleLabel,
+          proposedAt: proposal._creationTime,
+          resolvedAt: proposal.resolvedAt ?? null,
         };
       }),
     );

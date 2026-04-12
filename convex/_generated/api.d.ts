@@ -17,6 +17,7 @@ import type * as lib_approvalRules from "../lib/approvalRules.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as members from "../members.js";
 import type * as pools from "../pools.js";
+import type * as seed from "../seed.js";
 
 import type {
   ApiFromModules,
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   "lib/validators": typeof lib_validators;
   members: typeof members;
   pools: typeof pools;
+  seed: typeof seed;
 }>;
 
 /**
