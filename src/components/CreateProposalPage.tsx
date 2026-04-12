@@ -8,8 +8,9 @@ import { getTreasuryPda } from "../lib/treasury";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import logoPurple from "@/assets/logo_purple.png";
 
 interface CreateProposalPageProps {
   poolId: Id<"pools">;
@@ -150,122 +151,136 @@ export function CreateProposalPage({
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="gap-1.5 -ml-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back
-        </Button>
-        <h2 className="text-xl font-bold text-foreground">
-          Request Transaction
-        </h2>
-      </div>
+    <div className="min-h-screen bg-transparent">
+      {/* Top nav */}
+      <header className="border-b border-white/50 bg-white/70 backdrop-blur-md px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+        <img src={logoPurple} alt="Potlock" className="h-25 w-auto" />
+      </header>
 
-      {!isActive && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="px-4 py-3 text-sm text-amber-700">
-            This pot has no active contract. A contract must be created before
-            transactions can be proposed.
+      <div className="max-w-xl mx-auto px-8 py-8 flex flex-col gap-6">
+        {/* Back + title */}
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+          >
+            ← Back
+          </button>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-violet-700 to-indigo-500 bg-clip-text text-transparent">
+            Request Transaction
+          </h1>
+          {treasuryBalanceSol !== null && (
+            <p className="text-sm text-muted-foreground">
+              Treasury balance:{" "}
+              <span className="font-semibold text-foreground">
+                {treasuryBalanceSol.toFixed(4)} SOL
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* No active contract warning */}
+        {pool !== undefined && !isActive && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="px-4 py-3 flex items-start gap-2 text-sm text-amber-700">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              This pot has no active contract. A contract must be created before
+              transactions can be proposed.
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Form card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Transaction Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 pt-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Monthly groceries run at Costco"
+                className="focus-visible:ring-violet-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                type="text"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="e.g. groceries"
+                className="focus-visible:ring-violet-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="amount">Amount (SOL)</Label>
+              <Input
+                id="amount"
+                type="number"
+                min="0"
+                step="0.001"
+                value={amountSol}
+                onChange={(e) => {
+                  setAmountSol(e.target.value);
+                  setValidation(null);
+                }}
+                placeholder="0.5"
+                className="focus-visible:ring-violet-500"
+              />
+              {insufficientFunds && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Insufficient treasury funds (
+                  {treasuryBalanceSol?.toFixed(4) ?? "0"} SOL available).
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="recipient">Recipient wallet address</Label>
+              <Input
+                id="recipient"
+                type="text"
+                value={recipientWallet}
+                onChange={(e) => setRecipientWallet(e.target.value)}
+                placeholder="Solana public key (base58)"
+                className="focus-visible:ring-violet-500 font-mono text-sm"
+              />
+              {recipientWallet && !isValidPublicKey(recipientWallet) && (
+                <p className="text-xs text-destructive">
+                  Invalid Solana public key.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="url">
+                Link / note{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Input
+                id="url"
+                type="text"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://… or any note"
+                className="focus-visible:ring-violet-500"
+              />
+            </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Treasury balance hint */}
-      {treasuryBalanceSol !== null && (
-        <p className="text-xs text-muted-foreground -mt-2">
-          Treasury balance:{" "}
-          <span className="font-medium">
-            {treasuryBalanceSol.toFixed(4)} SOL
-          </span>
-        </p>
-      )}
-
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="description">Description</Label>
-          <Input
-            id="description"
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Monthly groceries run at Costco"
-            className="focus-visible:ring-violet-500"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="category">Category</Label>
-          <Input
-            id="category"
-            type="text"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. groceries"
-            className="focus-visible:ring-violet-500"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="amount">Amount (SOL)</Label>
-          <Input
-            id="amount"
-            type="number"
-            min="0"
-            step="0.001"
-            value={amountSol}
-            onChange={(e) => {
-              setAmountSol(e.target.value);
-              setValidation(null);
-            }}
-            placeholder="0.5"
-            className="focus-visible:ring-violet-500"
-          />
-          {insufficientFunds && (
-            <p className="text-xs text-destructive">
-              Insufficient treasury funds (
-              {treasuryBalanceSol?.toFixed(4) ?? "0"} SOL available).
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="recipient">Recipient wallet address</Label>
-          <Input
-            id="recipient"
-            type="text"
-            value={recipientWallet}
-            onChange={(e) => setRecipientWallet(e.target.value)}
-            placeholder="Solana public key (base58)"
-            className="focus-visible:ring-violet-500"
-          />
-          {recipientWallet && !isValidPublicKey(recipientWallet) && (
-            <p className="text-xs text-destructive">
-              Invalid Solana public key.
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="url">
-            Link / note{" "}
-            <span className="text-muted-foreground font-normal">
-              (optional)
-            </span>
-          </Label>
-          <Input
-            id="url"
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://… or any note"
-            className="focus-visible:ring-violet-500"
-          />
-        </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

@@ -26,9 +26,9 @@ export function SignInScreen({
           <img src={heroImage} alt="Potlock" className="w-64 drop-shadow-2xl" />
           <blockquote className="text-center">
             <p className="text-xl font-medium leading-snug">
-              "The smarter way to manage money
+              "When everyone brings something to the table,
               <br />
-              with people you trust."
+              the pot grows."
             </p>
           </blockquote>
         </div>
