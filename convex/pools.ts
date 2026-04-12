@@ -46,45 +46,17 @@ export const activatePool = mutation({
   },
 });
 
-// Creates a pool and its first contract atomically — pool is never left without a contract
-export const createPoolWithContract = mutation({
-  args: {
-    name: v.string(),
-    founderName: v.string(),
-    founderWallet: v.string(),
-    contractJson: v.string(),
-    contractHash: v.string(),
-  },
+// Returns pool details with member count for the join confirmation step
+export const getPoolWithMemberCount = query({
+  args: { poolId: v.id("pools") },
   handler: async (ctx, args) => {
-    const founderWallet = args.founderWallet;
-
-    // Insert pool immediately as active — contract is committed in the same transaction
-    const poolId = await ctx.db.insert("pools", {
-      name: args.name,
-      status: "active",
-      activeContractHash: args.contractHash,
-    });
-
-    // Add founder as manager
-    await ctx.db.insert("members", {
-      poolId,
-      name: args.founderName,
-      wallet: founderWallet,
-      role: "manager",
-    });
-
-    // Commit the contract
-    await ctx.db.insert("contracts", {
-      poolId,
-      hash: args.contractHash,
-      versionNumber: 1,
-      contractJson: args.contractJson,
-      prevHash: undefined,
-      nextHash: undefined,
-      createdAt: Date.now(),
-    });
-
-    return poolId;
+    const pool = await ctx.db.get(args.poolId);
+    if (!pool) return null;
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_poolId", (q) => q.eq("poolId", args.poolId))
+      .take(1000);
+    return { pool, memberCount: members.length };
   },
 });
 
