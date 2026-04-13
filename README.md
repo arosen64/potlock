@@ -1,4 +1,4 @@
-# 🍲 Potlock
+# Potlock
 
 > **When everyone brings something to the table, the pot grows.**
 
