@@ -42,8 +42,6 @@ export function AllTransactionsPage({
     poolId,
     currentMemberId: currentMemberId ?? undefined,
   });
-  const pool = useQuery(api.pools.getPool, { poolId });
-
   const castVote = useMutation(api.approvals.castVote);
   const doRecordExecution = useMutation(api.approvals.recordExecution);
   const cancelProposal = useMutation(api.approvals.cancelProposal);
@@ -143,7 +141,7 @@ export function AllTransactionsPage({
 
     const { Program, AnchorProvider, BN } = await import("@coral-xyz/anchor");
     const { default: idlJson } = await import("../idl/treasury.json");
-    const { TREASURY_PROGRAM_ID, getTreasuryPda, poolIdToBytes } =
+    const { TREASURY_PROGRAM_ID, getTreasuryPda } =
       await import("../lib/treasury");
 
     // skipPreflight avoids "already been processed" simulation errors when
@@ -157,55 +155,12 @@ export function AllTransactionsPage({
     const program = new Program(idlJson as any, provider);
     const treasuryPda = await getTreasuryPda(poolId);
 
-    // Step 1: Ensure treasury is initialized on-chain.
-    // If not, initialize it now with the current wallet as the sole member
-    // and threshold=1 so this single vote immediately executes the transfer.
-    // (Convex already validated the group approval off-chain.)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let treasuryAccount: any;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      treasuryAccount = await (program.account as any).treasury.fetch(
-        treasuryPda,
-      );
-    } catch {
-      // Not initialized — create it now
-      const poolSeed = await poolIdToBytes(poolId);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (program.methods as any)
-        .initializeTreasury(
-          Array.from(poolSeed),
-          [{ pubkey: anchorWallet.publicKey, username: "member" }],
-          1,
-        )
-        .accounts({ treasury: treasuryPda, authority: anchorWallet.publicKey })
-        .rpc(rpcOpts);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      treasuryAccount = await (program.account as any).treasury.fetch(
-        treasuryPda,
-      );
-    }
+    const treasuryAccount = await (program.account as any).treasury.fetch(
+      treasuryPda,
+    );
 
-    // Step 2: Ensure the on-chain treasury has a contract set.
-    // The Anchor program requires has_contract=true before spending proposals.
-    if (!treasuryAccount.hasContract) {
-      const contractHash = pool?.activeContractHash ?? null;
-      // Convert hex hash to 32-byte array, falling back to zeros if unavailable
-      const hashBytes: number[] = contractHash
-        ? Array.from(Buffer.from(contractHash, "hex"))
-        : Array(32).fill(0);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (program.methods as any)
-        .setContract(hashBytes)
-        .accounts({ treasury: treasuryPda, caller: anchorWallet.publicKey })
-        .rpc(rpcOpts);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      treasuryAccount = await (program.account as any).treasury.fetch(
-        treasuryPda,
-      );
-    }
-
-    // Step 3: Create the on-chain spending proposal.
+    // Create the on-chain spending proposal.
     const proposalCount = treasuryAccount.proposalCount;
     const [proposalPda] = PublicKey.findProgramAddressSync(
       [

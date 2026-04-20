@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
+import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { canonicalizeAndHash } from "../lib/contractHash";
@@ -136,6 +137,8 @@ function ContractBuilderStep({
   onSuccess: (poolId: Id<"pools">) => void;
   onBack: () => void;
 }) {
+  const { connection } = useConnection();
+  const anchorWallet = useAnchorWallet();
   const generateContract = useAction(api.gemini.generateContract);
   const refineContract = useAction(api.gemini.refineContract);
   const createPoolWithContract = useMutation(api.pools.createPoolWithContract);
@@ -197,7 +200,7 @@ function ContractBuilderStep({
 
   // Pool + contract created atomically only when user confirms
   async function handleConfirm() {
-    if (!currentContract) return;
+    if (!currentContract || !anchorWallet) return;
     setConfirming(true);
     setError(null);
     try {
@@ -209,6 +212,37 @@ function ContractBuilderStep({
         contractJson: JSON.stringify(currentContract),
         contractHash: hash,
       });
+
+      // Initialize the treasury on-chain so deposits and executions work
+      // immediately without lazy-init races later.
+      const { Program, AnchorProvider } = await import("@coral-xyz/anchor");
+      const { default: idlJson } = await import("../idl/treasury.json");
+      const { getTreasuryPda, poolIdToBytes } = await import("../lib/treasury");
+
+      const provider = new AnchorProvider(connection, anchorWallet, {
+        commitment: "confirmed",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const program = new Program(idlJson as any, provider);
+      const treasuryPda = await getTreasuryPda(poolId);
+      const poolSeed = await poolIdToBytes(poolId);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (program.methods as any)
+        .initializeTreasury(
+          Array.from(poolSeed),
+          [{ pubkey: anchorWallet.publicKey, username: founderName }],
+          1,
+        )
+        .accounts({ treasury: treasuryPda, authority: anchorWallet.publicKey })
+        .rpc({ commitment: "confirmed" });
+
+      const hashBytes = Array.from(Buffer.from(hash, "hex"));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (program.methods as any)
+        .setContract(hashBytes)
+        .accounts({ treasury: treasuryPda, caller: anchorWallet.publicKey })
+        .rpc({ commitment: "confirmed" });
 
       onSuccess(poolId);
     } catch (err) {

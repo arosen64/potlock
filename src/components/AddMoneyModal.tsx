@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL, SystemProgram, Transaction } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { SolAmount } from "./SolAmount";
 import { useSolPrice } from "@/hooks/useSolPrice";
-import { getTreasuryPda } from "../lib/treasury";
-
-// Minimum lamports to keep a 0-byte account rent-exempt (~0.00089 SOL, rounded up)
-const MIN_RENT_EXEMPT_LAMPORTS = 1_000_000; // 0.001 SOL — safely above threshold
 
 interface AddMoneyModalProps {
   poolId: Id<"pools">;
@@ -31,7 +27,6 @@ export function AddMoneyModal({
 
   const [amountSol, setAmountSol] = useState("");
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [treasuryExists, setTreasuryExists] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,21 +44,18 @@ export function AddMoneyModal({
     let cancelled = false;
     if (!anchorWallet?.publicKey) return;
 
-    Promise.all([
-      connection.getBalance(anchorWallet.publicKey),
-      getTreasuryPda(poolId).then((pda) => connection.getAccountInfo(pda)),
-    ])
-      .then(([balance, accountInfo]) => {
+    connection
+      .getBalance(anchorWallet.publicKey)
+      .then((balance) => {
         if (cancelled) return;
         setWalletBalance(balance / LAMPORTS_PER_SOL);
-        setTreasuryExists(accountInfo !== null);
       })
       .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [connection, anchorWallet?.publicKey, fetchBalance, poolId]);
+  }, [connection, anchorWallet?.publicKey, fetchBalance]);
 
   const solPriceUsd = useSolPrice();
   const parsedAmount = parseFloat(amountSol);
@@ -76,16 +68,11 @@ export function AddMoneyModal({
       ? Math.floor(parsedAmount * LAMPORTS_PER_SOL)
       : 0;
 
-  // For new treasury accounts (first deposit ever), need >= rent-exempt minimum
-  const belowRentMinimum =
-    treasuryExists === false && amountLamports < MIN_RENT_EXEMPT_LAMPORTS;
-
   const isValid =
     !isNaN(parsedAmount) &&
     parsedAmount > 0 &&
     walletBalance !== null &&
-    parsedAmount <= walletBalance - 0.001 && // reserve for tx fee
-    !belowRentMinimum;
+    parsedAmount <= walletBalance - 0.001;
 
   async function handleDeposit() {
     if (!anchorWallet) return;
@@ -93,47 +80,26 @@ export function AddMoneyModal({
     setError(null);
 
     try {
+      const { Program, AnchorProvider, BN } = await import("@coral-xyz/anchor");
+      const { default: idlJson } = await import("../idl/treasury.json");
+      const { getTreasuryPda } =
+        await import("../lib/treasury");
+
+      const provider = new AnchorProvider(connection, anchorWallet, {
+        commitment: "confirmed",
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const program = new Program(idlJson as any, provider);
       const treasuryPda = await getTreasuryPda(poolId);
 
-      // Raw SOL transfer — works regardless of on-chain program state.
-      // The treasury PDA accumulates lamports; connection.getBalance() reads it back.
-      const tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: anchorWallet.publicKey,
-          toPubkey: treasuryPda,
-          lamports: amountLamports,
-        }),
-      );
-
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash();
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = anchorWallet.publicKey;
-
-      // Sign via Phantom, broadcast via our Helius connection
-      const signed = await anchorWallet.signTransaction(tx);
-      const serialized = signed.serialize();
-      const sig = await connection.sendRawTransaction(serialized, {
-        skipPreflight: false,
-        maxRetries: 0,
-      });
-
-      // Rebroadcast every 2s while waiting — Solana validators frequently drop
-      // transactions under load, so a single send is not reliable.
-      const confirmPromise = connection.confirmTransaction(
-        { signature: sig, blockhash, lastValidBlockHeight },
-        "confirmed",
-      );
-      const resendInterval = setInterval(() => {
-        connection
-          .sendRawTransaction(serialized, { skipPreflight: true })
-          .catch(() => {});
-      }, 2000);
-      try {
-        await confirmPromise;
-      } finally {
-        clearInterval(resendInterval);
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (program.methods as any)
+        .deposit(new BN(amountLamports))
+        .accounts({
+          treasury: treasuryPda,
+          depositor: anchorWallet.publicKey,
+        })
+        .rpc({ commitment: "confirmed" });
 
       // Record the confirmed deposit in Convex
       await recordDeposit({
@@ -225,12 +191,6 @@ export function AddMoneyModal({
           {walletBalance !== null && parsedAmount > walletBalance - 0.001 && (
             <p className="text-xs text-red-500">
               Insufficient balance (keeping 0.001 SOL for transaction fee)
-            </p>
-          )}
-          {belowRentMinimum && (
-            <p className="text-xs text-amber-600">
-              First deposit must be at least 0.001 SOL to initialize the
-              treasury account.
             </p>
           )}
         </div>
