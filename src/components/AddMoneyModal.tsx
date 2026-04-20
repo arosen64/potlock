@@ -112,11 +112,28 @@ export function AddMoneyModal({
 
       // Sign via Phantom, broadcast via our Helius connection
       const signed = await anchorWallet.signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction(
+      const serialized = signed.serialize();
+      const sig = await connection.sendRawTransaction(serialized, {
+        skipPreflight: false,
+        maxRetries: 0,
+      });
+
+      // Rebroadcast every 2s while waiting — Solana validators frequently drop
+      // transactions under load, so a single send is not reliable.
+      const confirmPromise = connection.confirmTransaction(
         { signature: sig, blockhash, lastValidBlockHeight },
         "confirmed",
       );
+      const resendInterval = setInterval(() => {
+        connection
+          .sendRawTransaction(serialized, { skipPreflight: true })
+          .catch(() => {});
+      }, 2000);
+      try {
+        await confirmPromise;
+      } finally {
+        clearInterval(resendInterval);
+      }
 
       // Record the confirmed deposit in Convex
       await recordDeposit({
